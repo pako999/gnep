@@ -79,14 +79,15 @@ def initialize_database(config: DatabaseConfig = None) -> Engine:
         pool_pre_ping=True,  # Verify connections before using
     )
     
-    # Load PostGIS extension on connection
-    @event.listens_for(_engine, "connect")
-    def load_postgis(dbapi_conn, connection_record):
-        """Ensure PostGIS is loaded"""
-        cursor = dbapi_conn.cursor()
-        cursor.execute("CREATE EXTENSION IF NOT EXISTS postgis;")
-        cursor.close()
-        dbapi_conn.commit()
+    # PostGIS extension - Railway PostgreSQL already has it installed
+    # Commenting out auto-creation to avoid permission issues
+    # @event.listens_for(_engine, "connect")
+    # def load_postgis(dbapi_conn, connection_record):
+    #     """Ensure PostGIS is loaded"""
+    #     cursor = dbapi_conn.cursor()
+    #     cursor.execute("CREATE EXTENSION IF NOT EXISTS postgis;")
+    #     cursor.close()
+    #     dbapi_conn.commit()
     
     # Create session factory
     _SessionFactory = sessionmaker(bind=_engine)
