@@ -21,16 +21,28 @@ class DatabaseConfig:
     """Database configuration from environment variables"""
     
     def __init__(self):
-        self.host = os.getenv('DB_HOST', 'localhost')
-        self.port = os.getenv('DB_PORT', '5432')
-        self.database = os.getenv('DB_NAME', 'gurs_gnep')
-        self.user = os.getenv('DB_USER', 'postgres')
-        self.password = os.getenv('DB_PASSWORD', '')
-        self.echo = os.getenv('DB_ECHO', 'false').lower() == 'true'
+        # Check for DATABASE_URL first (Railway, Render, Heroku style)
+        database_url = os.getenv('DATABASE_URL')
+        
+        if database_url:
+            # Use the full connection string directly
+            self._connection_string = database_url
+            self.echo = os.getenv('DB_ECHO', 'false').lower() == 'true'
+        else:
+            # Fall back to individual environment variables
+            self.host = os.getenv('DB_HOST', 'localhost')
+            self.port = os.getenv('DB_PORT', '5432')
+            self.database = os.getenv('DB_NAME', 'gurs_gnep')
+            self.user = os.getenv('DB_USER', 'postgres')
+            self.password = os.getenv('DB_PASSWORD', '')
+            self.echo = os.getenv('DB_ECHO', 'false').lower() == 'true'
+            self._connection_string = None
     
     @property
     def connection_string(self) -> str:
         """Generate PostgreSQL connection string"""
+        if self._connection_string:
+            return self._connection_string
         return (
             f"postgresql://{self.user}:{self.password}@"
             f"{self.host}:{self.port}/{self.database}"
