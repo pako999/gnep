@@ -1,0 +1,40 @@
+{
+    "example_listing_1": {
+        "description": "House in Ljubljana Center with known cadastral data",
+        "settlement": "Ljubljana - Center",
+        "parcel_area_m2": 542,
+        "construction_year": 1974,
+        "net_floor_area_m2": 185.4,
+        "property_type": "Hiša",
+        "street_name": "Slovenska cesta",
+        "expected_confidence": "95%+",
+        "expected_parcel": "123/4"
+    },
+    "example_listing_2": {
+        "description": "Apartment in Maribor without exact year",
+        "settlement": "Maribor - Center",
+        "parcel_area_m2": 1250.5,
+        "property_type": "Stanovanje",
+        "expected_confidence": "70-85%",
+        "note": "Without construction year and floor area, confidence will be lower"
+    },
+    "example_listing_3": {
+        "description": "Land plot in rural area",
+        "settlement": "Bled",
+        "parcel_area_m2": 3200,
+        "property_type": "Zemljišče",
+        "expected_confidence": "60-80%",
+        "note": "Land plots without buildings rely only on parcel area matching"
+    },
+    "example_listing_4": {
+        "description": "Modern house with precise measurements",
+        "settlement": "Kranj",
+        "parcel_area_m2": 876.3,
+        "construction_year": 2018,
+        "net_floor_area_m2": 234.7,
+        "property_type": "Hiša",
+        "street_name": "Cesta Staneta Žagarja",
+        "expected_confidence": "90%+",
+        "note": "All fields provided for maximum matching accuracy"
+    }
+}

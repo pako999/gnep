@@ -1,0 +1,51 @@
+# Render Deploy Configuration for GNEP Backend
+# Auto-deployment for FastAPI + PostgreSQL + PostGIS
+
+services:
+  # Web Service - FastAPI Backend
+  - type: web
+    name: gnep-api
+    env: python
+    region: frankfurt  # EU region for Slovenia/Croatia
+    plan: starter  # Free tier (can upgrade to paid plans)
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: DB_HOST
+        fromDatabase:
+          name: gnep-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: gnep-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: gnep-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: gnep-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: gnep-db
+          property: password
+      - key: DB_ECHO
+        value: false
+      - key: PARCEL_AREA_TOLERANCE
+        value: "0.01"  # 1% tolerance
+      - key: MIN_CONFIDENCE
+        value: "50.0"
+    healthCheckPath: /health
+    
+  # PostgreSQL + PostGIS Database
+databases:
+  - name: gnep-db
+    databaseName: gurs_gnep
+    plan: starter  # Free tier (can upgrade for more storage)
+    region: frankfurt
+    ipAllowList: []  # Allow all IPs (restrict in production)
+    postgresMajorVersion: 15
