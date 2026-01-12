@@ -46,7 +46,7 @@ services:
 databases:
   - name: gnep-db
     databaseName: gurs_gnep
-    plan: starter  # Free tier (can upgrade for more storage)
+    plan: free  # Free tier (can upgrade to paid plans for more storage)
     region: frankfurt
     ipAllowList: []  # Allow all IPs (restrict in production)
     postgresMajorVersion: 15
