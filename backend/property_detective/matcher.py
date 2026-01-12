@@ -11,7 +11,7 @@ from fuzzywuzzy import fuzz
 from .models import Parcela, Stavba
 from .scoring import MatchScore, calculate_match_score, rank_candidates, filter_by_confidence
 from .config import PropertyDetectiveConfig, default_config
-from ..database.connection import session_scope
+from database.connection import session_scope
 
 
 class PropertyMatcher:
