@@ -1,244 +1,210 @@
-# GNEP - Quick Start Deployment Guide
+# Vercel & Render Deployment - Updated Structure
 
-## 🚀 Deploy Backend to Render (5 minutes)
+## ✅ Project Structure (Updated)
 
-### Step 1: Prepare Your Repo
-```bash
-cd /Users/admin/GIT/gurs/gnep
-git add .
-git commit -m "Initial GNEP full-stack implementation"
-git push origin main
+The project has been restructured for easier Vercel deployment:
+
 ```
-
-### Step 2: Deploy on Render
-1. Go to https://render.com and sign in
-2. Click **New +** → **Blueprint**
-3. Connect your GitHub repo: `pako999/gnep`
-4. Render will automatically detect `render.yaml`
-5. Click **Apply** - Render creates:
-   - ✅ Web Service: `gnep-api`
-   - ✅ PostgreSQL database with PostGIS
-   - ✅ All environment variables auto-configured
-
-**Your API will be live at**: `https://gnep-api.onrender.com` (or similar)
-
-### Step 3: Initialize Database
-```bash
-# Get database connection string from Render dashboard
-# Then run schema:
-psql <DATABASE_URL> -f database/schema.sql
+gnep/
+├── Frontend (Root) - Deploys to Vercel
+│   ├── app/
+│   ├── components/
+│   ├── lib/
+│   ├── package.json
+│   └── next.config.js
+│
+└── backend/ - Deploys to Render
+    ├── main.py
+    ├── property_detective/
+    ├── database/
+    ├── requirements.txt
+    ├── Dockerfile
+    └── render.yaml
 ```
 
 ---
 
-## 🌐 Deploy Frontend to Vercel (3 minutes)
+## 🌐 Deploy Frontend to Vercel (DONE!)
 
-### Step 1: Configure Vercel
-1. Go to https://vercel.com and sign in
-2. Click **Add New → Project**
-3. Import your GitHub repo: `pako999/gnep`
-4. **Important**: Set **Root Directory** to `frontend`
-5. Framework will auto-detect as **Next.js**
+### You've already deployed! ✅
 
-### Step 2: Add Environment Variables
-In Vercel project settings → Environment Variables:
+Your Vercel deployment is live. To access it:
 
-```env
-NEXT_PUBLIC_API_URL=https://gnep-api.onrender.com
-NEXT_PUBLIC_MAPBOX_TOKEN=<get from https://account.mapbox.com/access-tokens/>
-```
+1. Check your Vercel dashboard for the deployment URL
+2. It should be something like: `https://gnep-xxxxx.vercel.app`
 
-### Step 3: Deploy
-Click **Deploy** - Done! ✅
+### Fix ESLint Warning (Optional)
 
-Your site will be live at: `https://gnep.vercel.app`
+To remove the ESLint build warning, add this to `package.json`:
 
----
-
-## 🧪 Test the Deployment
-
-### 1. Test Backend Health
 ```bash
-curl https://gnep-api.onrender.com/health
-```
+# Quick fix - disable ESLint during builds
+npm install --save-dev eslint eslint-config-next
 
-Expected response:
-```json
-{
-  "status": "healthy",
-  "database_connected": true,
-  "version": "1.0.0"
+# Or add to package.json scripts:
+"scripts": {
+  "build": "next build",
+  "lint": "next lint"
 }
 ```
 
-### 2. Test PropertyDetective Endpoint
+Then commit and push:
 ```bash
-curl -X POST https://gnep-api.onrender.com/api/find-probable-parcels \
-  -H "Content-Type: application/json" \
-  -d '{
-    "settlement": "Ljubljana",
-    "parcel_area_m2": 542
-  }'
+git add package.json
+git commit -m "Fix: Add ESLint for builds"
+git push
 ```
 
-### 3. Test Frontend
-Visit: `https://gnep.vercel.app`
-- ✅ Search form loads
-- ✅ Map displays (if Mapbox token configured)
-- ✅ Can submit test query
+Vercel will auto-redeploy.
 
 ---
 
-## 📊 Import GURS Data
+## 🚀 Deploy Backend to Render
 
-### Option 1: Manual Import (Recommended for First Time)
-```sql
--- Example: Insert test parcel
-INSERT INTO parcele (parcela_stevilka, ko_sifra, ko_ime, povrsina, geom)
-VALUES (
-  '123/4',
-  '2690',
-  'Ljubljana - Center',
-  542.0,
-  ST_GeomFromText('POLYGON((...))', 3794)
-);
+### Step 1: Update render.yaml Path
 
--- Insert test building
-INSERT INTO stavbe (parcela_id, leto_izgradnje, neto_tloris, naslov_naselje)
-VALUES (1, 1974, 185.4, 'Ljubljana');
-```
+Since we moved backend files to `backend/`, we need to update the build path:
 
-### Option 2: Bulk Import from GURS Files
 ```bash
-# Download GURS data
-wget https://egp.gu.gov.si/egp/jgp_data_download/...
-
-# Convert SHP to SQL (using ogr2ogr)
-ogr2ogr -f PostgreSQL PG:"dbname=gurs_gnep" parcele.shp -nln parcele
-
-# Or create import script (future enhancement)
-python scripts/import_gurs_data.py --input gurs_export.zip
+# In your repo root, update render.yaml location
+# render.yaml is now in backend/ folder
 ```
 
----
+### Step 2: Deploy to Render
 
-## 🔧 Local Development
+**Option A: Use Blueprint (Recommended)**
 
-### Backend
-```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+1. Go to https://render.com/dashboard
+2. Click **New +** → **Blueprint**
+3. Connect your GitHub repo: `pako999/gnep`
+4. Render will look for `render.yaml`
+5. **⚠️ Important**: Update the blueprint to point to `backend/`
 
-# Install dependencies
-pip install -r requirements.txt
+**Option B: Manual Setup**
 
-# Set up .env
-cp .env.example .env
-# Edit .env with local database credentials
+1. Go to https://render.com/dashboard
+2. Click **New +** → **Web Service**
+3. Connect GitHub repo: `pako999/gnep`
+4. Configure:
+   - **Name**: `gnep-api`
+   - **Root Directory**: `backend`
+   - **Runtime**: Python 3
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+5. Add **PostgreSQL** database (click "New Database")
+6. Click **Create Web Service**
 
-# Run server
-uvicorn main:app --reload
-```
+### Step 3: Set Environment Variables
 
-Access at: http://localhost:8000
-
-### Frontend
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Set up environment
-cp .env.example .env.local
-# Edit .env.local:
-#   NEXT_PUBLIC_API_URL=http://localhost:8000
-#   NEXT_PUBLIC_MAPBOX_TOKEN=your_token
-
-# Run dev server
-npm run dev
-```
-
-Access at: http://localhost:3000
-
----
-
-## ⚙️ Configuration
-
-### Adjust Matching Tolerances
-
-Edit backend `.env`:
+In Render dashboard → Environment:
 ```env
-PARCEL_AREA_TOLERANCE=0.01     # 1% (lower = stricter)
-BUILDING_AREA_TOLERANCE=0.01
-YEAR_TOLERANCE=1                # ±1 year
-MIN_CONFIDENCE=50.0             # Minimum score to show
-MAX_RESULTS=3                   # Top N results
+DB_HOST=(auto-filled from database)
+DB_PORT=(auto-filled from database)
+DB_NAME=(auto-filled from database)
+DB_USER=(auto-filled from database)
+DB_PASSWORD=(auto-filled from database)
 ```
 
-### Adjust Scoring Weights
+### Step 4: Initialize Database
 
-Edit `property_detective/config.py`:
-```python
-parcel_area_weight = 50      # Increase if area is most important
-construction_year_weight = 30
-building_area_weight = 40
-```
-
----
-
-## 📈 Monitoring
-
-### Render Dashboard
-- Web Service metrics (CPU, memory, requests)
-- Database metrics (connections, queries)
-- Logs and error tracking
-
-### Health Check Endpoint
-Set up monitoring (UptimeRobot, Pingdom) to call:
-```
-https://gnep-api.onrender.com/health
+Once database is created:
+```bash
+# Get database URL from Render dashboard
+psql <DATABASE_INTERNAL_URL> -f backend/database/schema.sql
 ```
 
 ---
 
-## 🆘 Troubleshooting
+## 🔗 Connect Frontend to Backend
 
-### Backend not starting?
-1. Check Render logs in dashboard
-2. Verify environment variables are set
-3. Check database connection string
+### Update Frontend Environment Variables
 
-### Frontend can't connect to backend?
-1. Verify `NEXT_PUBLIC_API_URL` in Vercel
-2. Check CORS settings in `main.py`
-3. Ensure backend is deployed and healthy
-
-### Map not showing?
-1. Verify `NEXT_PUBLIC_MAPBOX_TOKEN` is set
-2. Check browser console for errors
-3. Ensure GeoJSON data is valid
-
-### Low match confidence?
-1. Import more GURS data
-2. Adjust tolerances in config
-3. Ensure listing data has all fields (year, floor area)
+1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
+2. Update `NEXT_PUBLIC_API_URL`:
+   ```
+   NEXT_PUBLIC_API_URL=https://gnep-api.onrender.com
+   ```
+   (Replace with your actual Render URL)
+3. Redeploy frontend (Vercel → Deployments → Redeploy)
 
 ---
 
 ## ✅ Deployment Checklist
 
-- [ ] Backend deployed to Render
-- [ ] Database created with PostGIS
-- [ ] Schema initialized (`schema.sql` run)
-- [ ] Frontend deployed to Vercel
-- [ ] Environment variables configured
-- [ ] Mapbox token added
-- [ ] Health check returns "healthy"
-- [ ] Test API endpoint works
-- [ ] Frontend can connect to backend
-- [ ] Map displays correctly
-- [ ] GURS data imported (at least test data)
+### Frontend (Vercel)
+- [x] Deployed to Vercel
+- [ ] ESLint warning fixed (optional)
+- [ ] `NEXT_PUBLIC_MAPBOX_TOKEN` environment variable added
+- [ ] `NEXT_PUBLIC_API_URL` updated with Render backend URL
+- [ ] Tested on live URL
 
-**You're live!** 🎉
+### Backend (Render)
+- [ ] Web Service created
+- [ ] PostgreSQL database created
+- [ ] Database schema initialized
+- [ ] Environment variables set
+- [ ] Health check endpoint working: `/health`
+- [ ] Test API endpoint: `/api/find-probable-parcels`
+
+---
+
+## 🧪 Testing
+
+### Test Frontend
+Visit your Vercel URL: `https://gnep-xxxxx.vercel.app`
+- ✅ Page loads
+- ✅ Form is visible
+- ✅ Map component shows
+
+### Test Backend
+```bash
+# Health check
+curl https://gnep-api.onrender.com/health
+
+# Test matching endpoint
+curl -X POST https://gnep-api.onrender.com/api/find-probable-parcels \
+  -H "Content-Type: application/json" \
+  -d '{"settlement": "Ljubljana", "parcel_area_m2": 542}'
+```
+
+---
+
+## 📝 Updated File Locations
+
+| File | Old Location | New Location |
+|------|-------------|--------------|
+| Frontend files | `frontend/` | Root `/` |
+| Backend files | Root `/` | `backend/` |
+| `render.yaml` | Root | `backend/render.yaml` |
+| `package.json` | `frontend/` | Root `/` |
+
+---
+
+## 🆘 Troubleshooting
+
+### Vercel ESLint Error
+**Solution**: The build still succeeds. To fix completely:
+```bash
+npm install --save-dev eslint eslint-config-next
+git add . && git commit -m "Add ESLint" && git push
+```
+
+### Render can't find render.yaml
+**Solution**: Use Manual Setup (Option B above) or move `render.yaml` to root:
+```bash
+mv backend/render.yaml .
+git add . && git commit -m "Move render.yaml to root" && git push
+```
+
+### Backend CORS errors
+**Solution**: Update `backend/main.py` CORS to include your Vercel URL:
+```python
+allow_origins=[
+    "https://gnep-xxxxx.vercel.app",  # Your actual Vercel URL
+    "https://*.vercel.app",
+]
+```
+
+---
+
+**Next**: Deploy your backend to Render and connect it to the frontend!
