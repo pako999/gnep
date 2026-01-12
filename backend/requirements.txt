@@ -11,14 +11,14 @@ sqlalchemy>=2.0.0
 geoalchemy2>=0.14.0
 psycopg2-binary>=2.9.0
 
-# Geospatial Data Processing
-geopandas>=0.14.0
+# Geospatial libraries
+gdal==3.10.3  # Must match system GDAL version
+fiona>=1.9.0.14.0
 shapely>=2.0.0
 pyproj>=3.6.0  # For coordinate transformations
 
 # GURS Data Processing
-gdal>=3.7.0  # For SHP file processing
-fiona>=1.9.5  # Easier interface to GDAL
+geopandas>=0.14.0 # geopandas depends on gdal, fiona, shapely, pyproj
 
 # Configuration Management
 python-dotenv>=1.0.0
