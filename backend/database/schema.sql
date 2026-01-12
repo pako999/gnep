@@ -39,7 +39,8 @@ CREATE INDEX IF NOT EXISTS idx_parcele_ko_sifra ON parcele(ko_sifra);
 CREATE INDEX IF NOT EXISTS idx_parcele_ko_ime ON parcele(ko_ime);
 
 -- Create GIN index for text search on settlement names
-CREATE INDEX IF NOT EXISTS idx_parcele_ko_ime_gin ON parcele USING GIN(to_tsvector('slovenian', ko_ime));
+-- Using 'simple' configuration (Supabase doesn't support 'slovenian')
+CREATE INDEX IF NOT EXISTS idx_parcele_ko_ime_gin ON parcele USING GIN(to_tsvector('simple', ko_ime));
 
 -- ============================================================
 -- STAVBE (Buildings) Table
