@@ -36,7 +36,9 @@ def seed_database():
             conn.commit()
             logger.info("Checked/Enabled PostGIS extension")
     except Exception as e:
-        logger.warning(f"Could not enable PostGIS (might already exist or need superuser): {e}")
+        logger.error(f"Could not enable PostGIS: {e}")
+        # Re-raise so we see it in the API response
+        raise Exception(f"Failed to enable PostGIS linkage: {str(e)}")
 
     # Create Tables
     try:
