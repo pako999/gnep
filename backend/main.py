@@ -219,6 +219,29 @@ async def get_parcel_details(parcela_id: int):
         )
 
 
+@app.post("/api/admin/seed", tags=["Admin"])
+async def seed_database_endpoint():
+    """
+    Seed the database with sample data (Admin only)
+    
+    Populates the database with sample Slovenian cadastral data 
+    for demonstration and testing purposes.
+    """
+    try:
+        from database.seed_data import seed_database
+        seed_database()
+        return {
+            "success": True,
+            "message": "Database seeded successfully"
+        }
+    except Exception as e:
+        logger.error(f"Error seeding database: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error seeding database: {str(e)}"
+        )
+
+
 # Error handlers
 
 @app.exception_handler(404)
