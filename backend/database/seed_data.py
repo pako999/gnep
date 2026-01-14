@@ -10,53 +10,80 @@ import os
 # Add parent directory to path to allow imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from database.connection import session_scope
-from property_detective.models import Parcela, Stavba
+from database.connection import session_scope, get_engine
+from property_detective.models import Parcela, Stavba, Base
 from sqlalchemy import text
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def key_exists(session, model, **kwargs):
+    """Check if a record exists by its unique keys"""
+    return session.query(model).filter_by(**kwargs).first() is not None
+
 def seed_database():
     """Seed the database with sample data"""
-    logger.info("Starting database seeding...")
+    logger.info("Starting database initialization and seeding...")
     
+    # 1. Initialize Schema
+    engine = get_engine()
+    
+    # Enable PostGIS
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+            conn.commit()
+            logger.info("Checked/Enabled PostGIS extension")
+    except Exception as e:
+        logger.warning(f"Could not enable PostGIS (might already exist or need superuser): {e}")
+
+    # Create Tables
+    try:
+        logger.info("Creating database tables if missing...")
+        Base.metadata.create_all(engine)
+        logger.info("Tables created/verified successfully")
+    except Exception as e:
+        logger.error(f"Error creating tables: {e}")
+        raise
+
+    # 2. Seed Data
     with session_scope() as session:
         # Check if data already exists
         count = session.query(Parcela).count()
         if count > 0:
-            logger.info(f"Database already contains {count} parcels. Skipping seed.")
+            logger.info(f"Database already contains {count} parcels. Skipping data seed.")
             return
 
         # ==========================================
         # 1. Ljubljana Center (House)
         # ==========================================
-        lj_parcel = Parcela(
-            parcela_stevilka="123/4",
-            ko_sifra="1723",
-            ko_ime="Ljubljana Center",
-            povrsina=542.0,
-            # Point in Ljubljana Center (approximate)
-            geom="POLYGON((460500 102500, 460520 102500, 460520 102525, 460500 102525, 460500 102500))"
-        )
-        session.add(lj_parcel)
-        session.flush() # Get ID
+        if not key_exists(session, Parcela, parcela_stevilka="123/4", ko_sifra="1723"):
+            lj_parcel = Parcela(
+                parcela_stevilka="123/4",
+                ko_sifra="1723",
+                ko_ime="Ljubljana Center",
+                povrsina=542.0,
+                # Point in Ljubljana Center (approximate) - WKT
+                geom="POLYGON((460500 102500, 460520 102500, 460520 102525, 460500 102525, 460500 102500))"
+            )
+            session.add(lj_parcel)
+            session.flush() # Get ID
 
-        lj_building = Stavba(
-            parcela_id=lj_parcel.id,
-            stavba_stevilka="1122",
-            leto_izgradnje=1974,
-            neto_tloris=185.4,
-            stevilo_etaz=2,
-            tip="Stanovanjska stavba",
-            naslov_ulica="Slovenska cesta",
-            naslov_hisna_st="10",
-            naslov_naselje="Ljubljana",
-            naslov_posta="Ljubljana",
-            naslov_postna_st="1000"
-        )
-        session.add(lj_building)
+            lj_building = Stavba(
+                parcela_id=lj_parcel.id,
+                stavba_stevilka="1122",
+                leto_izgradnje=1974,
+                neto_tloris=185.4,
+                stevilo_etaz=2,
+                tip="Stanovanjska stavba",
+                naslov_ulica="Slovenska cesta",
+                naslov_hisna_st="10",
+                naslov_naselje="Ljubljana",
+                naslov_posta="Ljubljana",
+                naslov_postna_st="1000"
+            )
+            session.add(lj_building)
 
         # ==========================================
         # 2. Maribor Center (Apartment Building)
