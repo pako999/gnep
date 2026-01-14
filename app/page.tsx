@@ -194,6 +194,21 @@ export default function Home() {
                         </div>
                     </div>
                 </div>
+
+                {/* Footer */}
+                <footer className="mt-16 pt-8 border-t border-gray-200 text-center">
+                    <p className="text-sm text-gray-600">
+                        Built by{' '}
+                        <a
+                            href="https://futurecode.si"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-700 font-medium transition"
+                        >
+                            FutureCode.si
+                        </a>
+                    </p>
+                </footer>
             </div>
         </main>
     );
