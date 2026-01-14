@@ -35,9 +35,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # Local development
-        "https://*.vercel.app",  # Vercel preview deployments
-        "https://gnep.vercel.app",  # Production Vercel domain (update with your actual domain)
+        "https://gnep-ai.vercel.app",  # Production Vercel domain
     ],
+    allow_origin_regex=r"https://.*\.vercel\.app",  # All Vercel preview deployments
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
