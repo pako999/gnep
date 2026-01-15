@@ -4,16 +4,19 @@ import { useState } from 'react';
 import Map, { Source, Layer, NavigationControl } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
+
 interface PropertyMapProps {
     geojson?: any;
     center?: [number, number];
     zoom?: number;
+    onMapClick?: (lng: number, lat: number) => void;
 }
 
 export default function PropertyMap({
     geojson,
     center = [14.5, 46.05], // Slovenia center
-    zoom = 8
+    zoom = 8,
+    onMapClick
 }: PropertyMapProps) {
     const [viewState, setViewState] = useState({
         longitude: center[0],
@@ -35,9 +38,11 @@ export default function PropertyMap({
         <Map
             {...viewState}
             onMove={evt => setViewState(evt.viewState)}
+            onClick={evt => onMapClick && onMapClick(evt.lngLat.lng, evt.lngLat.lat)}
             mapboxAccessToken={mapboxToken}
             style={{ width: '100%', height: '100%' }}
-            mapStyle="mapbox://styles/mapbox/streets-v12"
+            mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
+            cursor={onMapClick ? 'crosshair' : 'auto'}
         >
             <NavigationControl position="top-right" />
 
@@ -47,15 +52,15 @@ export default function PropertyMap({
                         id="parcel-fills"
                         type="fill"
                         paint={{
-                            'fill-color': ['get', 'color'],
-                            'fill-opacity': ['get', 'opacity']
+                            'fill-color': '#3b82f6',
+                            'fill-opacity': 0.4
                         }}
                     />
                     <Layer
                         id="parcel-borders"
                         type="line"
                         paint={{
-                            'line-color': '#000',
+                            'line-color': '#1d4ed8',
                             'line-width': 2
                         }}
                     />
