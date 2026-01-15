@@ -240,7 +240,7 @@ async def get_parcel_tiles(z: int, x: int, y: int):
                             ST_Transform(geom, 3857), 
                             ST_TileEnvelope(:z, :x, :y)
                         ) AS geom
-                    FROM parcela
+                    FROM parcele
                     WHERE ST_Intersects(
                         ST_Transform(geom, 3857), 
                         ST_TileEnvelope(:z, :x, :y)
