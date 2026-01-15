@@ -25,6 +25,9 @@ class DatabaseConfig:
         database_url = os.getenv('DATABASE_URL')
         
         if database_url:
+            # Normalize postgres:// to postgresql:// for SQLAlchemy 1.4+ compatibility
+            if database_url.startswith("postgres://"):
+                database_url = database_url.replace("postgres://", "postgresql://", 1)
             # Use the full connection string directly
             self._connection_string = database_url
             self.echo = os.getenv('DB_ECHO', 'false').lower() == 'true'

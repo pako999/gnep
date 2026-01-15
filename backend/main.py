@@ -116,7 +116,7 @@ async def find_parcel_by_point_endpoint(data: CoordinateSearch):
     try:
         with session_scope() as session:
             # Raw SQL Query using ST_AsGeoJSON for direct geometry string
-            # Also selecting specific columns to avoid loading heavy geometry objects
+            # Using ST_Force2D and explicit SRID casting for maximum robustness
             query = text("""
                 SELECT 
                     id, 
@@ -124,10 +124,10 @@ async def find_parcel_by_point_endpoint(data: CoordinateSearch):
                     ko_sifra,
                     ko_ime, 
                     CAST(povrsina AS FLOAT) as povrsina, 
-                    ST_AsGeoJSON(ST_Transform(geom, 4326)) as geojson 
+                    ST_AsGeoJSON(ST_Transform(ST_SetSRID(ST_Force2D(geom), 3794), 4326)) as geojson 
                 FROM parcele 
                 WHERE ST_Contains(
-                    geom, 
+                    ST_SetSRID(ST_Force2D(geom), 3794), 
                     ST_Transform(ST_SetSRID(ST_Point(:lng, :lat), 4326), 3794)
                 ) 
                 LIMIT 1;
@@ -186,13 +186,7 @@ async def find_parcel_by_point_endpoint(data: CoordinateSearch):
         import traceback
         error_detail = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         logger.error(f"Error in coordinate search: {error_detail}")
-        
-        # Check if it is a PostGIS error
-        if "transform" in str(e).lower() or "srid" in str(e).lower():
-             logger.error("Potential PostGIS Projection Error. Ensure SRID 3794 is defined.")
-        
-        # TEMPORARY: Return full error to client for debugging
-        raise HTTPException(status_code=500, detail=f"Search Debug Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Search Error: {str(e)}")
 
 @app.get("/", tags=["Root"])
 async def root():
@@ -254,12 +248,12 @@ async def get_parcel_tiles(z: int, x: int, y: int):
                         parcela_stevilka, 
                         ko_ime,
                         ST_AsMVTGeom(
-                            ST_Transform(ST_SetSRID(geom, 3794), 3857), 
+                            ST_Transform(ST_SetSRID(ST_Force2D(geom), 3794), 3857), 
                             ST_TileEnvelope(:z, :x, :y)
                         ) AS geom
                     FROM parcele
                     WHERE ST_Intersects(
-                        ST_Transform(ST_SetSRID(geom, 3794), 3857), 
+                        ST_Transform(ST_SetSRID(ST_Force2D(geom), 3794), 3857), 
                         ST_TileEnvelope(:z, :x, :y)
                     )
                 )
