@@ -61,7 +61,10 @@ export default function ChatWidget() {
                 body: JSON.stringify({ question: userMsg.content })
             });
 
-            if (!res.ok) throw new Error('Failed to fetch response');
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({ detail: res.statusText }));
+                throw new Error(errorData.detail || `Server Error ${res.status}`);
+            }
 
             const data = await res.json();
 
