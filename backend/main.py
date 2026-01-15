@@ -318,6 +318,37 @@ async def get_flood_risk(parcel_id: int):
         )
 
 
+@app.post("/api/agent/chat", tags=["Agent"])
+async def agent_chat(request: dict):
+    """
+    AI Agent Chat Endpoint (Text-to-SQL)
+    Input: {"question": "..."}
+    Output: {"sql": "...", "result": [...]}
+    """
+    from agent.service import AgentService
+    from database.connection import session_scope
+    
+    question = request.get("question")
+    if not question:
+        raise HTTPException(status_code=400, detail="Missing question")
+        
+    try:
+        with session_scope() as session:
+            service = AgentService(session)
+            return service.process_query(question)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Agent Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/agent/questions", tags=["Agent"])
+async def get_agent_questions():
+    """Return predefined example questions"""
+    from agent.prompts import PREDEFINED_QUESTIONS
+    return {"questions": PREDEFINED_QUESTIONS}
+
+
 @app.post("/api/admin/seed", tags=["Admin"])
 async def seed_database_endpoint():
     """
