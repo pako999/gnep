@@ -272,8 +272,10 @@ async def get_parcel_tiles(z: int, x: int, y: int):
             return Response(content=result or b"", media_type="application/vnd.mapbox-vector-tile")
             
     except Exception as e:
-        logger.error(f"Tile Error: {e}")
-        return Response(status_code=500)
+        import traceback
+        error_detail = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+        logger.error(f"Tile Error: {e}\n{error_detail}")
+        return Response(content=f"Tile Error: {e}\n{error_detail}".encode(), status_code=500)
     """
     Find probable parcels matching real estate listing data
     
