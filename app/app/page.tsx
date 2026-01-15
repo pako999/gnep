@@ -82,6 +82,27 @@ export default function Home() {
         handleAddressSearch(mockFeature);
     };
 
+
+
+    // Risk Analysis State
+    const [riskData, setRiskData] = useState<Record<number, any>>({});
+
+    const handleAnalyzeRisk = async (parcelId: number) => {
+        try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze/flood/${parcelId}`);
+            if (!res.ok) throw new Error('Analysis failed');
+            const data = await res.json();
+
+            setRiskData(prev => ({
+                ...prev,
+                [parcelId]: data
+            }));
+        } catch (err) {
+            console.error("Risk analysis error:", err);
+            // Optionally set error state for specific parcel
+        }
+    };
+
     const handleSubmitAttributes = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -226,8 +247,8 @@ export default function Home() {
                                         <div
                                             key={idx}
                                             className={`p-3 rounded-lg border transition-all cursor-pointer hover:shadow-md ${match.confidence > 90
-                                                    ? 'bg-green-50/30 border-green-200 hover:border-green-300'
-                                                    : 'bg-white border-gray-200 hover:border-blue-300'
+                                                ? 'bg-green-50/30 border-green-200 hover:border-green-300'
+                                                : 'bg-white border-gray-200 hover:border-blue-300'
                                                 }`}
                                         >
                                             <div className="flex justify-between items-start">
@@ -240,9 +261,38 @@ export default function Home() {
                                                     {match.confidence.toFixed(0)}%
                                                 </div>
                                             </div>
-                                            <div className="mt-2 pt-2 border-t border-gray-100 flex gap-4 text-xs text-gray-600">
-                                                <span><b>Area:</b> {match.parcela.povrsina}m²</span>
-                                                {match.stavba && <span><b>Bldg:</b> Yes</span>}
+                                            <div className="mt-2 pt-2 border-t border-gray-100 flex flex-col gap-2">
+                                                <div className="flex justify-between text-xs text-gray-600">
+                                                    <span><b>Area:</b> {match.parcela.povrsina}m²</span>
+                                                    {match.stavba && <span><b>Bldg:</b> Yes</span>}
+                                                </div>
+
+                                                {/* Flood Risk Analysis */}
+                                                <div className="mt-1">
+                                                    {riskData[match.parcela.id] ? (
+                                                        <div className={`text-xs p-2 rounded flex items-center gap-2 ${riskData[match.parcela.id].overall_risk === 'HIGH' ? 'bg-red-100 text-red-800' :
+                                                            riskData[match.parcela.id].overall_risk === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                                                                'bg-green-100 text-green-800'
+                                                            }`}>
+                                                            <span className="font-bold">Flood Risk: {riskData[match.parcela.id].overall_risk}</span>
+                                                            {riskData[match.parcela.id].details.length > 0 && (
+                                                                <span className="text-[10px] opacity-75">
+                                                                    ({riskData[match.parcela.id].details[0].type})
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleAnalyzeRisk(match.parcela.id);
+                                                            }}
+                                                            className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors w-full text-center font-medium"
+                                                        >
+                                                            🌊 Analyze Flood Risk
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}

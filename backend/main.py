@@ -293,6 +293,31 @@ async def get_parcel_details(parcela_id: int):
         )
 
 
+@app.get("/api/analyze/flood/{parcel_id}", tags=["Analysis"])
+async def get_flood_risk(parcel_id: int):
+    """
+    Analyze flood risk for a specific parcel
+    
+    Checks for intersection with:
+    - Running waters (Rivers/Streams)
+    - Standing waters (Lakes)
+    - Wetlands
+    """
+    from property_detective.analyzers.flood_risk import analyze_flood_risk
+    from database.connection import session_scope
+    
+    try:
+        with session_scope() as session:
+            result = analyze_flood_risk(parcel_id, session)
+            return result
+    except Exception as e:
+        logger.error(f"Error analyzing flood risk: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error analyzing flood risk: {str(e)}"
+        )
+
+
 @app.post("/api/admin/seed", tags=["Admin"])
 async def seed_database_endpoint():
     """
