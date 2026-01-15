@@ -33,13 +33,7 @@ app = FastAPI(
 # CORS Configuration for Vercel Frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://gnep.vercel.app",
-        "https://gnep-liard.vercel.app",
-        "https://gnep-git-main-pako999.vercel.app",
-    ],
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origins=["*"],  # Allow ALL origins temporarily to fix Vercel connection
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
