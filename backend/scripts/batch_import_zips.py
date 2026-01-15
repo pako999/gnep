@@ -90,6 +90,33 @@ def main():
     )
     total_imported += count
     
+    # 3. Hydrography - Flowing Water (Lines)
+    count = import_from_zip(
+        'gurs_data/DTM_SLO_HIDROGRAFIJA_20260110/DTM_SLO_HIDROGRAFIJA_HY_TEKOCE_VODE_L_20260110.zip',
+        'DTM_SLO_HIDROGRAFIJA_HY_TEKOCEVODE_L_line.shp',
+        'water_flowing_lines',
+        engine
+    )
+    total_imported += count
+
+    # 4. Hydrography - Flowing Water (Polygons)
+    count = import_from_zip(
+        'gurs_data/DTM_SLO_HIDROGRAFIJA_20260110/DTM_SLO_HIDROGRAFIJA_HY_TEKOCE_VODE_P_20260110.zip',
+        'DTM_SLO_HIDROGRAFIJA_HY_TEKOCEVODE_P_poligon.shp',
+        'water_flowing_polygons',
+        engine
+    )
+    total_imported += count
+
+    # 5. Hydrography - Standing Water
+    count = import_from_zip(
+        'gurs_data/DTM_SLO_HIDROGRAFIJA_20260110/DTM_SLO_HIDROGRAFIJA_HY_STOJECE_VODE_P_20260110.zip',
+        'DTM_SLO_HIDROGRAFIJA_HY_STOJECEVODE_P_poligon.shp',
+        'water_standing',
+        engine
+    )
+    total_imported += count
+    
     logger.info("\n" + "=" * 60)
     logger.info(f"✨ BATCH IMPORT COMPLETE!")
     logger.info(f"   Total records imported: {total_imported:,}")
