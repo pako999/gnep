@@ -77,6 +77,7 @@ class HealthResponse(BaseModel):
     status: str
     timestamp: str
     database_connected: bool
+    ai_configured: bool
     version: str
 
 
