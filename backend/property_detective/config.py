@@ -26,7 +26,7 @@ class MatchingConfig:
     max_results: int = 3
     
     # Minimum confidence score to include in results (0-100)
-    min_confidence: float = 50.0
+    min_confidence: float = 30.0  # Minimum confidence score (%) - LOWERED due to missing settlement names
     
     # Settlement name fuzzy matching threshold (0-100)
     settlement_fuzzy_threshold: int = 80

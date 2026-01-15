@@ -6,12 +6,15 @@ Finds probable parcels matching real estate listing data
 from typing import List, Dict, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
+import logging
 from fuzzywuzzy import fuzz
 
 from .models import Parcela, Stavba
 from .scoring import MatchScore, calculate_match_score, rank_candidates, filter_by_confidence
 from .config import PropertyDetectiveConfig, default_config
 from database.connection import session_scope
+
+logger = logging.getLogger(__name__)
 
 
 class PropertyMatcher:
@@ -158,9 +161,12 @@ class PropertyMatcher:
         # Build base query for parcels
         query = session.query(Parcela)
         
-        # Filter by settlement (fuzzy match)
-        settlement_filters = self._build_settlement_filter(settlement)
-        query = query.filter(settlement_filters)
+        # TEMPORARY FIX: Skip settlement filter since most parcels have "Imported" placeholder
+        # TODO: Add proper KO lookup table and update all parcel names
+        # settlement_filters = self._build_settlement_filter(settlement)
+        # query = query.filter(settlement_filters)
+        
+        logger.info(f"Searching for parcels with area {parcel_area}m² (±{self.config.matching.parcel_area_tolerance}%)")
         
         # Filter by parcel area (with tolerance)
         query = query.filter(
