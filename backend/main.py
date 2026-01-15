@@ -212,8 +212,15 @@ async def health_check():
         status="healthy" if db_connected else "unhealthy",
         timestamp=datetime.utcnow().isoformat(),
         database_connected=db_connected,
+        ai_configured=bool(os.getenv("OPENAI_API_KEY")),
         version="1.0.0"
     )
+
+import os
+logger.info(f"Startup Environment Check: OPENAI_API_KEY {'Set' if os.getenv('OPENAI_API_KEY') else 'Missing'}")
+if os.getenv("OPENAI_API_KEY"):
+    key = os.getenv("OPENAI_API_KEY")
+    logger.info(f"API Key Preview: {key[:8]}...{key[-4:]}")
 
 
 @app.post("/api/find-probable-parcels", response_model=MatchResponse, tags=["PropertyDetective"])
