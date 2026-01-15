@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { apiClient, ListingData, MatchResult } from '@/lib/api-client';
 import PropertyMap from '@/components/PropertyMap';
+import ChatWidget from '../components/ChatWidget';
 
 export default function Home() {
     const [activeTab, setActiveTab] = useState<'attributes' | 'address'>('address');
@@ -321,6 +322,9 @@ export default function Home() {
                     </div>
                 )}
             </div>
+
+            {/* AI Chat Widget */}
+            <ChatWidget />
         </main>
     );
 }
