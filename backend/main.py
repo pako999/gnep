@@ -170,12 +170,16 @@ async def find_parcel_by_point_endpoint(data: CoordinateSearch):
             }
             
     except Exception as e:
-        logger.error(f"Error in coordinate search: {e}", exc_info=True)
+        import traceback
+        error_detail = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+        logger.error(f"Error in coordinate search: {error_detail}")
+        
         # Check if it is a PostGIS error
         if "transform" in str(e).lower() or "srid" in str(e).lower():
              logger.error("Potential PostGIS Projection Error. Ensure SRID 3794 is defined.")
         
-        raise HTTPException(status_code=500, detail=f"Search Error: {str(e)}")
+        # TEMPORARY: Return full error to client for debugging
+        raise HTTPException(status_code=500, detail=f"Search Debug Error: {str(e)}\n\nTraceback: {error_detail}")
 
 @app.get("/", tags=["Root"])
 async def root():
