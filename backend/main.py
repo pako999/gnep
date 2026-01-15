@@ -96,6 +96,84 @@ async def startup_event():
     logger.info("Database initialized successfully")
 
 
+
+class CoordinateSearch(BaseModel):
+    """Input model for coordinate-based search"""
+    lng: float
+    lat: float
+    address: Optional[str] = None
+
+@app.post("/api/find-parcel-by-point", response_model=MatchResponse, tags=["Search"])
+async def find_parcel_by_point_endpoint(data: CoordinateSearch):
+    """Find a parcel containing a specific point (lng, lat)"""
+    from property_detective.geojson_utils import parcels_to_geojson
+    from database.connection import session_scope
+    from property_detective.models import Parcela
+    from sqlalchemy import func
+    
+    logger.info(f"Searching for parcel at coordinates: {data.lng}, {data.lat}")
+    
+    try:
+        with session_scope() as session:
+            # Create a point geometry from coordinates (ST_SetSRID(ST_Point(lng, lat), 4326))
+            # Then transform to Slovenian grid (3794)
+            # Find parcel that contains this point
+            
+            point_geom = func.ST_Transform(
+                func.ST_SetSRID(func.ST_Point(data.lng, data.lat), 4326),
+                3794
+            )
+            
+            parcel = session.query(Parcela).filter(
+                func.ST_Contains(Parcela.geom, point_geom)
+            ).first()
+            
+            if not parcel:
+                return {
+                    "success": False,
+                    "message": f"No parcel found at location: {data.address or 'Coordinates'}",
+                    "matches": [],
+                    "geojson": None,
+                    "count": 0
+                }
+                
+            # Found a parcel!
+            # Format match object (similar to Matcher output)
+            match_dict = {
+                "parcela": {
+                    "id": parcel.id,
+                    "parcela_stevilka": parcel.parcela_stevilka,
+                    "ko_sifra": parcel.ko_sifra,
+                    "ko_ime": parcel.ko_ime,
+                    "povrsina": parcel.povrsina
+                },
+                "stavba": None,
+                "confidence": 100.0,  # Exact match
+                "score": 1.0,
+                "notes": ["Exact location match"]
+            }
+            
+            # Create GeoJSON
+            # We need to attach the match object to a mock 'candidate' object for the util
+            class MockMatch:
+                def __init__(self, p):
+                    self.parcela = p
+                    self.confidence = 100.0
+            
+            geojson = parcels_to_geojson([MockMatch(parcel)])
+            
+            return {
+                "success": True,
+                "message": f"Found parcel {parcel.parcela_stevilka} in KO {parcel.ko_ime} at address {data.address}",
+                "matches": [match_dict],
+                "geojson": geojson,
+                "count": 1
+            }
+            
+    except Exception as e:
+        logger.error(f"Error in coordinate search: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/", tags=["Root"])
 async def root():
     """Root endpoint - API information"""
