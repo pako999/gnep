@@ -254,12 +254,12 @@ async def get_parcel_tiles(z: int, x: int, y: int):
                         parcela_stevilka, 
                         ko_ime,
                         ST_AsMVTGeom(
-                            ST_Transform(geom, 3857), 
+                            ST_Transform(ST_SetSRID(geom, 3794), 3857), 
                             ST_TileEnvelope(:z, :x, :y)
                         ) AS geom
                     FROM parcele
                     WHERE ST_Intersects(
-                        ST_Transform(geom, 3857), 
+                        ST_Transform(ST_SetSRID(geom, 3794), 3857), 
                         ST_TileEnvelope(:z, :x, :y)
                     )
                 )
