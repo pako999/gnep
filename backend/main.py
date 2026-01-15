@@ -308,10 +308,12 @@ async def get_parcel_tiles(z: int, x: int, y: int):
         return MatchResponse(**result)
     
     except Exception as e:
-        logger.error(f"Error in find_probable_parcels: {str(e)}")
+        import traceback
+        error_detail = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+        logger.error(f"Error in find_probable_parcels: {error_detail}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error processing request: {str(e)}"
+            detail=f"Error processing request: {str(e)}\n\nTraceback:\n{error_detail}"
         )
 
 
