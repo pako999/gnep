@@ -14,7 +14,7 @@ psycopg2-binary>=2.9.0
 # Geospatial libraries (Commented out for local seed script to avoid GDAL build)
 # gdal==3.10.3  # Must match system GDAL version
 # fiona>=1.9.0
-# shapely>=2.0.0
+shapely>=2.0.0
 # pyproj>=3.6.0  # For coordinate transformations
 
 # GURS Data Processing
