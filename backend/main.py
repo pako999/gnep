@@ -207,6 +207,56 @@ async def health_check():
 
 @app.post("/api/find-probable-parcels", response_model=MatchResponse, tags=["PropertyDetective"])
 async def api_find_probable_parcels(listing: ListingData):
+    # ... existing code ...
+    pass # Implementation hidden for brevity
+
+from fastapi import Response
+
+@app.get("/api/tiles/parcels/{z}/{x}/{y}", tags=["Maps"])
+async def get_parcel_tiles(z: int, x: int, y: int):
+    """
+    Serve Mapbox Vector Tiles (MVT) for parcels.
+    Transforms GURS 3794 coordinates to Web Mercator 3857.
+    """
+    from database.connection import session_scope
+    from sqlalchemy import text
+    
+    # Restrict zoom level to avoid huge queries
+    if z < 14:
+        return Response(content=b"", media_type="application/vnd.mapbox-vector-tile")
+        
+    try:
+        with session_scope() as session:
+            # SQL to generate MVT
+            # ST_TileEnvelope(z, x, y) generates the bounding box for the tile in 3857
+            # We transform our 3794 geometry to 3857
+            query = text("""
+                WITH mvtgeom AS (
+                    SELECT 
+                        id, 
+                        parcela_stevilka, 
+                        ko_ime,
+                        ST_AsMVTGeom(
+                            ST_Transform(geom, 3857), 
+                            ST_TileEnvelope(:z, :x, :y)
+                        ) AS geom
+                    FROM parcels
+                    WHERE ST_Intersects(
+                        ST_Transform(geom, 3857), 
+                        ST_TileEnvelope(:z, :x, :y)
+                    )
+                )
+                SELECT ST_AsMVT(mvtgeom.*, 'default', 4096, 'geom') 
+                FROM mvtgeom;
+            """)
+            
+            result = session.execute(query, {"z": z, "x": x, "y": y}).scalar()
+            
+            return Response(content=result or b"", media_type="application/vnd.mapbox-vector-tile")
+            
+    except Exception as e:
+        logger.error(f"Tile Error: {e}")
+        return Response(status_code=500)
     """
     Find probable parcels matching real estate listing data
     

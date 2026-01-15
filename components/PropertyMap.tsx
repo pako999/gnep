@@ -46,6 +46,28 @@ export default function PropertyMap({
         >
             <NavigationControl position="top-right" />
 
+            {/* Cadastral Layer (Vector Tiles) */}
+            <Source
+                id="cadastre-source"
+                type="vector"
+                tiles={[
+                    `${process.env.NEXT_PUBLIC_API_URL || ''}/api/tiles/parcels/{z}/{x}/{y}`
+                ]}
+                minzoom={14}
+                maxzoom={21}
+            >
+                <Layer
+                    id="cadastre-lines"
+                    type="line"
+                    source-layer="default"
+                    paint={{
+                        'line-color': '#22c55e', // Green like gov site
+                        'line-width': 1,
+                        'line-opacity': 0.8
+                    }}
+                />
+            </Source>
+
             {geojson && (
                 <Source id="parcels" type="geojson" data={geojson}>
                     <Layer
