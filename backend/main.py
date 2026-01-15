@@ -398,10 +398,14 @@ async def get_flood_risk(parcel_id: int):
 async def agent_chat(request: dict):
     """
     AI Agent Chat Endpoint (Text-to-SQL)
-    Input: {"question": "..."}
-    Output: {"sql": "...", "result": [...]}
     """
-    from agent.service import AgentService
+    try:
+        # Lazy import to avoid startup crash if dependencies missing
+        from agent.service import AgentService
+    except ImportError as e:
+        logger.error(f"Missing Dependency for AI Agent: {e}")
+        raise HTTPException(status_code=500, detail="AI Service Config Error (Missing Lib)")
+
     from database.connection import session_scope
     
     question = request.get("question")
@@ -411,6 +415,8 @@ async def agent_chat(request: dict):
     try:
         with session_scope() as session:
             service = AgentService(session)
+            if not service.client:
+                 raise HTTPException(status_code=503, detail="AI Service Not Configured (Missing Key)")
             return service.process_query(question)
     except HTTPException:
         raise
