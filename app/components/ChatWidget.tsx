@@ -1,31 +1,31 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface ChatMessage {
     id: string;
     role: 'user' | 'assistant';
     content: string;
-    isSql?: boolean;  // If true, render code block
+    isSql?: boolean;
     sql?: string;
     data?: any[];
 }
 
 export default function ChatWidget() {
-    const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Initial greeting
+    // Initial greeting (only once)
     useEffect(() => {
         if (messages.length === 0) {
             setMessages([
                 {
                     id: '1',
                     role: 'assistant',
-                    content: 'Pozdravljeni! Sem vaš AI asistent za GNEP. Vprašajte me karkoli o parcelah, cenah ali poplavni varnosti. 🤖'
+                    content: 'Pozdravljeni! Sem vaš GNEP AI asistent. Kako vam lahko pomagam pri analizi nepremičnin danes? 🤖'
                 }
             ]);
         }
@@ -33,16 +33,21 @@ export default function ChatWidget() {
 
     // Auto-scroll
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+        if (showHistory) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [messages, showHistory]);
 
-    const handleSend = async () => {
-        if (!input.trim()) return;
+    const handleSend = async (text: string = input) => {
+        if (!text.trim()) return;
+
+        // Show history when interaction starts
+        setShowHistory(true);
 
         const userMsg: ChatMessage = {
             id: Date.now().toString(),
             role: 'user',
-            content: input
+            content: text
         };
 
         setMessages(prev => [...prev, userMsg]);
@@ -50,7 +55,7 @@ export default function ChatWidget() {
         setLoading(true);
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/agent/chat`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/agent/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ question: userMsg.content })
@@ -60,9 +65,8 @@ export default function ChatWidget() {
 
             const data = await res.json();
 
-            // Format format the response
             let aiContent = "Tukaj so rezultati:";
-            if (data.result.length === 0) aiContent = "Nisem našel nobenih podatkov za vaše vprašanje.";
+            if (!data.result || data.result.length === 0) aiContent = "Nisem našel nobenih podatkov za vaše kriterije.";
             else aiContent = `Našel sem ${data.result.length} zapisov.`;
 
             const aiMsg: ChatMessage = {
@@ -71,7 +75,7 @@ export default function ChatWidget() {
                 content: aiContent,
                 isSql: true,
                 sql: data.sql,
-                data: data.result
+                data: data.result || []
             };
 
             setMessages(prev => [...prev, aiMsg]);
@@ -80,71 +84,65 @@ export default function ChatWidget() {
             setMessages(prev => [...prev, {
                 id: Date.now().toString(),
                 role: 'assistant',
-                content: 'Oprostite, prišlo je do napake pri obdelavi vašega vprašanja.'
+                content: 'Oprostite, prišlo je do napake pri obdelavi vašega vprašanja. Prosim poskusite ponovno.'
             }]);
         } finally {
             setLoading(false);
         }
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    };
+
     return (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
-            {/* Chat Window */}
-            {isOpen && (
-                <div className="bg-white w-96 h-[500px] mb-4 rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-200">
-                    {/* Header */}
-                    <div className="bg-blue-600 p-4 text-white flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl">🤖</span>
-                            <h3 className="font-bold">GNEP AI Agent</h3>
-                        </div>
-                        <button onClick={() => setIsOpen(false)} className="hover:bg-blue-700 p-1 rounded">✕</button>
+        <>
+            {/* Messages Area (Floats above bar) */}
+            {showHistory && (
+                <div className="fixed bottom-20 left-4 right-4 md:left-20 md:right-20 max-h-[60vh] overflow-y-auto bg-white/95 backdrop-blur shadow-2xl rounded-t-xl border border-gray-200 border-b-0 p-4 z-40 transition-all duration-300">
+                    <div className="flex justify-between items-center mb-4 border-b pb-2">
+                        <h3 className="font-bold text-gray-700">Pogovor z AI Asistentom</h3>
+                        <button onClick={() => setShowHistory(false)} className="text-gray-500 hover:text-gray-800">
+                            ✕ Zapri
+                        </button>
                     </div>
 
-                    {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                    <div className="space-y-4">
                         {messages.map((msg) => (
                             <div key={msg.id} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                                <div className={`max-w-[85%] p-3 rounded-lg text-sm ${msg.role === 'user'
+                                <div className={`max-w-[90%] p-3 rounded-xl text-sm ${msg.role === 'user'
                                         ? 'bg-blue-600 text-white rounded-br-none'
-                                        : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm'
+                                        : 'bg-gray-100 border border-gray-200 text-gray-800 rounded-bl-none'
                                     }`}>
                                     <div>{msg.content}</div>
 
-                                    {/* SQL & Data Display for Assistant */}
-                                    {msg.role === 'assistant' && msg.isSql && (
-                                        <div className="mt-3 space-y-2">
-                                            {/* SQL Code */}
-                                            <div className="bg-gray-900 text-gray-300 p-2 rounded text-xs font-mono overflow-x-auto">
-                                                {msg.sql}
-                                            </div>
-
-                                            {/* Data Table Preview (Max 3 rows) */}
-                                            {msg.data && msg.data.length > 0 && (
-                                                <div className="bg-gray-100 rounded border border-gray-200 overflow-hidden text-xs">
-                                                    <table className="w-full">
-                                                        <thead className="bg-gray-200">
-                                                            <tr>
-                                                                {Object.keys(msg.data[0]).slice(0, 3).map(k => (
-                                                                    <th key={k} className="p-1 text-left font-bold">{k}</th>
-                                                                ))}
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {msg.data.slice(0, 3).map((row: any, i: number) => (
-                                                                <tr key={i} className="border-t border-gray-200">
-                                                                    {Object.values(row).slice(0, 3).map((val: any, j) => (
-                                                                        <td key={j} className="p-1 truncate max-w-[100px]">{String(val)}</td>
-                                                                    ))}
-                                                                </tr>
+                                    {/* Data Table */}
+                                    {msg.role === 'assistant' && msg.data && msg.data.length > 0 && (
+                                        <div className="mt-3 overflow-x-auto bg-white rounded border border-gray-200">
+                                            <table className="w-full text-xs text-left">
+                                                <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                                                    <tr>
+                                                        {Object.keys(msg.data[0]).slice(0, 5).map(k => (
+                                                            <th key={k} className="p-2 whitespace-nowrap">{k}</th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {msg.data.slice(0, 5).map((row: any, i: number) => (
+                                                        <tr key={i} className="border-b last:border-0 hover:bg-blue-50">
+                                                            {Object.values(row).slice(0, 5).map((val: any, j) => (
+                                                                <td key={j} className="p-2 truncate max-w-[150px]">{String(val)}</td>
                                                             ))}
-                                                        </tbody>
-                                                    </table>
-                                                    {msg.data.length > 3 && (
-                                                        <div className="p-1 text-center text-gray-500 italic bg-gray-50 border-t border-gray-200">
-                                                            + {msg.data.length - 3} more rows
-                                                        </div>
-                                                    )}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                            {msg.data.length > 5 && (
+                                                <div className="p-1 text-center text-gray-400 bg-gray-50 italic text-[10px]">
+                                                    + {msg.data.length - 5} ostalih zapisov
                                                 </div>
                                             )}
                                         </div>
@@ -154,44 +152,75 @@ export default function ChatWidget() {
                         ))}
                         {loading && (
                             <div className="flex items-start">
-                                <div className="bg-white border border-gray-200 p-3 rounded-lg rounded-bl-none shadow-sm flex gap-1">
+                                <div className="bg-gray-100 p-3 rounded-xl rounded-bl-none flex gap-1">
                                     <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
-                                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></span>
-                                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></span>
+                                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></span>
+                                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></span>
                                 </div>
                             </div>
                         )}
                         <div ref={messagesEndRef} />
                     </div>
+                </div>
+            )}
+
+            {/* Bottom Input Bar */}
+            <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#1a1f2e] border-t border-gray-800 p-3 shadow-lg">
+                <div className="max-w-[1400px] mx-auto flex items-center gap-3">
+                    {/* Icon */}
+                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0">
+                        🤖
+                    </div>
 
                     {/* Input */}
-                    <div className="p-3 bg-white border-t border-gray-200 flex gap-2">
+                    <div className="flex-1 relative">
                         <input
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                            placeholder="Vprašajte o cenah, parcelah..."
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            onKeyDown={handleKeyDown}
+                            placeholder="Vprašajte AI asistenta o tem območju..."
+                            className="w-full bg-[#0f111a] text-gray-200 border border-gray-700 rounded-lg pl-4 pr-12 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-500"
                         />
                         <button
-                            onClick={handleSend}
-                            disabled={loading || !input.trim()}
-                            className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors disabled:opacity-50"
+                            onClick={() => handleSend()}
+                            disabled={!input.trim()}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-400 disabled:opacity-50 p-1"
                         >
                             ➤
                         </button>
                     </div>
-                </div>
-            )}
 
-            {/* Toggle Button */}
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg transition-transform hover:scale-110 flex items-center justify-center w-14 h-14"
-            >
-                {isOpen ? <span className="text-xl">✕</span> : <span className="text-2xl">💬</span>}
-            </button>
-        </div>
+                    {/* Quick Access Buttons (Hidden on mobile) */}
+                    <div className="hidden md:flex items-center gap-2">
+                        <button
+                            onClick={() => handleSend("Analiziraj to območje za poplavno varnost")}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+                        >
+                            Analiziraj Območje
+                        </button>
+                        <button
+                            onClick={() => handleSend("Kaj se nahaja na tem območju?")}
+                            className="bg-[#2a3042] hover:bg-[#353b50] text-gray-300 border border-gray-700 px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap"
+                        >
+                            Identificiraj Objekte
+                        </button>
+                        <button
+                            onClick={() => handleSend("Kakšne so cene nepremičnin v bližini?")}
+                            className="bg-[#2a3042] hover:bg-[#353b50] text-gray-300 border border-gray-700 px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap"
+                        >
+                            Cene Nepremičnin
+                        </button>
+                        <button
+                            onClick={() => setShowHistory(!showHistory)}
+                            className="text-gray-400 hover:text-white px-2 transition-colors"
+                            title={showHistory ? "Skrij pogovor" : "Pokaži pogovor"}
+                        >
+                            {showHistory ? '⬇' : '⬆'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </>
     );
 }
