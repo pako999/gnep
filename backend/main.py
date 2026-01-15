@@ -115,8 +115,8 @@ async def find_parcel_by_point_endpoint(data: CoordinateSearch):
     
     try:
         with session_scope() as session:
-            # Raw SQL Query using ST_AsGeoJSON for direct geometry string
-            # Using ST_Force2D and explicit SRID casting for maximum robustness
+            # OPTIMIZED: Use index-friendly ST_Intersects and keep geom on one side
+            # We use ST_Transform on the input point only.
             query = text("""
                 SELECT 
                     id, 
@@ -124,10 +124,10 @@ async def find_parcel_by_point_endpoint(data: CoordinateSearch):
                     ko_sifra,
                     ko_ime, 
                     CAST(povrsina AS FLOAT) as povrsina, 
-                    ST_AsGeoJSON(ST_Transform(ST_SetSRID(ST_Force2D(geom), 3794), 4326)) as geojson 
+                    ST_AsGeoJSON(ST_Transform(ST_Force2D(geom), 4326)) as geojson 
                 FROM parcele 
-                WHERE ST_Contains(
-                    ST_SetSRID(ST_Force2D(geom), 3794), 
+                WHERE ST_Intersects(
+                    geom, 
                     ST_Transform(ST_SetSRID(ST_Point(:lng, :lat), 4326), 3794)
                 ) 
                 LIMIT 1;
@@ -186,7 +186,8 @@ async def find_parcel_by_point_endpoint(data: CoordinateSearch):
         import traceback
         error_detail = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         logger.error(f"Error in coordinate search: {error_detail}")
-        raise HTTPException(status_code=500, detail=f"Search Error: {str(e)}")
+        # RETURN FULL DETAIL FOR DEBUGGING
+        raise HTTPException(status_code=500, detail=f"Search Error: {str(e)}\n{error_detail}")
 
 @app.get("/", tags=["Root"])
 async def root():
@@ -245,9 +246,8 @@ async def get_parcel_tiles(z: int, x: int, y: int):
         
     try:
         with session_scope() as session:
-            # SQL to generate MVT
-            # ST_TileEnvelope(z, x, y) generates the bounding box for the tile in 3857
-            # We transform our 3794 geometry to 3857
+            # OPTIMIZED: Use index-friendly filter by transforming the TILE ENVELOPE to match DATA (3794)
+            # This allows the query to use the spatial index on the 'geom' column.
             query = text("""
                 WITH mvtgeom AS (
                     SELECT 
@@ -255,14 +255,12 @@ async def get_parcel_tiles(z: int, x: int, y: int):
                         parcela_stevilka, 
                         ko_ime,
                         ST_AsMVTGeom(
-                            ST_Transform(ST_SetSRID(ST_Force2D(geom), 3794), 3857), 
+                            ST_Transform(ST_Force2D(geom), 3857), 
                             ST_TileEnvelope(:z, :x, :y)
                         ) AS geom
                     FROM parcele
-                    WHERE ST_Intersects(
-                        ST_Transform(ST_SetSRID(ST_Force2D(geom), 3794), 3857), 
-                        ST_TileEnvelope(:z, :x, :y)
-                    )
+                    WHERE geom && ST_Transform(ST_TileEnvelope(:z, :x, :y), 3794)
+                      AND ST_Intersects(geom, ST_Transform(ST_TileEnvelope(:z, :x, :y), 3794))
                 )
                 SELECT ST_AsMVT(mvtgeom.*, 'default', 4096, 'geom') 
                 FROM mvtgeom;
@@ -271,6 +269,13 @@ async def get_parcel_tiles(z: int, x: int, y: int):
             result = session.execute(query, {"z": z, "x": x, "y": y}).scalar()
             
             return Response(content=result or b"", media_type="application/vnd.mapbox-vector-tile")
+            
+    except Exception as e:
+        import traceback
+        error_detail = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+        logger.error(f"Error in MVT tile: {error_detail}")
+        # Return detail in header or body (MVT returns body usually)
+        raise HTTPException(status_code=500, detail=f"MVT Error: {str(e)}\n{error_detail}")
             
     except Exception as e:
         import traceback

@@ -17,11 +17,16 @@ class AgentService:
             logger.warning("OPENAI_API_KEY is not set. Agent will not function.")
             self.client = None
         else:
+            # Vercel AI Gateway support
+            # Note: vck_ keys often require the gateway URL. 
+            # If the user is using a pure Vercel AI SDK key, it might need 'https://gateway.ai.vercel.dev/v1' 
+            # but some specific integrations use other URLs.
             base_url = None
             if self.api_key.startswith("vck_"):
-                logger.info("Detected Vercel AI Gateway Key. Using Vercel Gateway URL.")
+                logger.info("Detected Vercel AI Gateway Key.")
                 base_url = "https://gateway.ai.vercel.dev/v1"
             
+            logger.info(f"Initializing OpenAI Client with {'custom base_url' if base_url else 'defualt base_url'}")
             self.client = OpenAI(
                 api_key=self.api_key,
                 base_url=base_url
