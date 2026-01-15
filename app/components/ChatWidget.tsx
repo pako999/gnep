@@ -79,12 +79,14 @@ export default function ChatWidget() {
             };
 
             setMessages(prev => [...prev, aiMsg]);
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
             setMessages(prev => [...prev, {
                 id: Date.now().toString(),
                 role: 'assistant',
-                content: 'Oprostite, prišlo je do napake pri obdelavi vašega vprašanja. Prosim poskusite ponovno.'
+                content: typeof err.message === 'string' && err.message.length < 100
+                    ? `Napaka: ${err.message}. (Preverite API ključ)`
+                    : 'Oprostite, prišlo je do napake pri obdelavi vašega vprašanja. Prosim poskusite ponovno.'
             }]);
         } finally {
             setLoading(false);
@@ -114,8 +116,8 @@ export default function ChatWidget() {
                         {messages.map((msg) => (
                             <div key={msg.id} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                                 <div className={`max-w-[90%] p-3 rounded-xl text-sm ${msg.role === 'user'
-                                        ? 'bg-blue-600 text-white rounded-br-none'
-                                        : 'bg-gray-100 border border-gray-200 text-gray-800 rounded-bl-none'
+                                    ? 'bg-blue-600 text-white rounded-br-none'
+                                    : 'bg-gray-100 border border-gray-200 text-gray-800 rounded-bl-none'
                                     }`}>
                                     <div>{msg.content}</div>
 
