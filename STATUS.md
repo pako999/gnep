@@ -148,12 +148,13 @@ Vercel will auto-redeploy.
 
 ## 🎯 Summary
 
-**Status**: Frontend deployed ✅, Backend ready to deploy ⏳
+**Status**: Frontend deployed ✅, Backend ready for Render ✅
 
-**Next Action**: Deploy backend to Render (5 minutes)
+**Strategy Update**: Local setup skipped. Proceeding with **Online-Only** setup.
 
-**After That**: Connect frontend to backend and test!
+**Next Actions**:
+1. Push code to GitHub.
+2. Deploy to **Render OR Railway**.
+3. Run Data Import against Remote DB.
 
----
-
-See [`DEPLOYMENT.md`](file:///Users/admin/GIT/gurs/gnep/DEPLOYMENT.md) for detailed instructions.
+See [`ONLINE_SETUP.md`](file:///Users/admin/.gemini/antigravity/brain/b27b4831-30e4-4813-a7f2-d228d9f952da/ONLINE_SETUP.md) for the guide.
