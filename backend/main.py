@@ -105,29 +105,37 @@ class CoordinateSearch(BaseModel):
 @app.post("/api/find-parcel-by-point", response_model=MatchResponse, tags=["Search"])
 async def find_parcel_by_point_endpoint(data: CoordinateSearch):
     """Find a parcel containing a specific point (lng, lat)"""
-    from property_detective.geojson_utils import parcels_to_geojson
+    """Find a parcel containing a specific point (lng, lat)"""
+    # Use Raw SQL to bypass potential ORM/Shapely dependency issues on the server
     from database.connection import session_scope
-    from property_detective.models import Parcela
-    from sqlalchemy import func
+    from sqlalchemy import text
+    import json
     
     logger.info(f"Searching for parcel at coordinates: {data.lng}, {data.lat}")
     
     try:
         with session_scope() as session:
-            # Create a point geometry from coordinates (ST_SetSRID(ST_Point(lng, lat), 4326))
-            # Then transform to Slovenian grid (3794)
-            # Find parcel that contains this point
+            # Raw SQL Query using ST_AsGeoJSON for direct geometry string
+            # Also selecting specific columns to avoid loading heavy geometry objects
+            query = text("""
+                SELECT 
+                    id, 
+                    parcela_stevilka, 
+                    ko_sifra,
+                    ko_ime, 
+                    CAST(povrsina AS FLOAT) as povrsina, 
+                    ST_AsGeoJSON(ST_Transform(geom, 4326)) as geojson 
+                FROM parcele 
+                WHERE ST_Contains(
+                    geom, 
+                    ST_Transform(ST_SetSRID(ST_Point(:lng, :lat), 4326), 3794)
+                ) 
+                LIMIT 1;
+            """)
             
-            point_geom = func.ST_Transform(
-                func.ST_SetSRID(func.ST_Point(data.lng, data.lat), 4326),
-                3794
-            )
+            result = session.execute(query, {"lng": data.lng, "lat": data.lat}).mappings().first()
             
-            parcel = session.query(Parcela).filter(
-                func.ST_Contains(Parcela.geom, point_geom)
-            ).first()
-            
-            if not parcel:
+            if not result:
                 return {
                     "success": False,
                     "message": f"No parcel found at location: {data.address or 'Coordinates'}",
@@ -136,36 +144,41 @@ async def find_parcel_by_point_endpoint(data: CoordinateSearch):
                     "count": 0
                 }
                 
-            # Found a parcel!
-            # Format match object (similar to Matcher output)
+            # Parse GeoJSON string from DB
+            geometry = json.loads(result['geojson'])
+            
+            # Construct Match Object manually
             match_dict = {
                 "parcela": {
-                    "id": parcel.id,
-                    "parcela_stevilka": parcel.parcela_stevilka,
-                    "ko_sifra": parcel.ko_sifra,
-                    "ko_ime": parcel.ko_ime,
-                    "povrsina": parcel.povrsina
+                    "id": result['id'],
+                    "parcela_stevilka": result['parcela_stevilka'],
+                    "ko_sifra": result['ko_sifra'],
+                    "ko_ime": result['ko_ime'],
+                    "povrsina": result['povrsina']
                 },
                 "stavba": None,
-                "confidence": 100.0,  # Exact match
+                "confidence": 100.0,
                 "score": 1.0,
                 "notes": ["Exact location match"]
             }
             
-            # Create GeoJSON
-            # We need to attach the match object to a mock 'candidate' object for the util
-            class MockMatch:
-                def __init__(self, p):
-                    self.parcela = p
-                    self.confidence = 100.0
-            
-            geojson = parcels_to_geojson([MockMatch(parcel)])
+            # Construct FeatureCollection manually
+            feature_collection = {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "geometry": geometry,
+                        "properties": match_dict["parcela"]
+                    }
+                ]
+            }
             
             return {
                 "success": True,
-                "message": f"Found parcel {parcel.parcela_stevilka} in KO {parcel.ko_ime} at address {data.address}",
+                "message": f"Found parcel {result['parcela_stevilka']} in KO {result['ko_ime']}",
                 "matches": [match_dict],
-                "geojson": geojson,
+                "geojson": feature_collection,
                 "count": 1
             }
             
@@ -179,7 +192,7 @@ async def find_parcel_by_point_endpoint(data: CoordinateSearch):
              logger.error("Potential PostGIS Projection Error. Ensure SRID 3794 is defined.")
         
         # TEMPORARY: Return full error to client for debugging
-        raise HTTPException(status_code=500, detail=f"Search Debug Error: {str(e)}\n\nTraceback: {error_detail}")
+        raise HTTPException(status_code=500, detail=f"Search Debug Error: {str(e)}")
 
 @app.get("/", tags=["Root"])
 async def root():
