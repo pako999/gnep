@@ -166,6 +166,39 @@ def test_connection() -> bool:
         return False
 
 
+def check_database_setup(engine: Engine):
+    """
+    Verify database has PostGIS and SRID 3794 (Slovenian Grid)
+    """
+    try:
+        with engine.connect() as conn:
+            # 1. Check PostGIS
+            conn.execute("CREATE EXTENSION IF NOT EXISTS postgis;")
+            
+            # 2. Check/Insert SRID 3794
+            # Using raw SQL to avoid dependency on geoalchemy2 in this check
+            check_srid = conn.execute("SELECT srid FROM spatial_ref_sys WHERE srid = 3794;").fetchone()
+            
+            if not check_srid:
+                print("⚠ SRID 3794 missing. Inserting...")
+                conn.execute("""
+                    INSERT INTO spatial_ref_sys (srid, auth_name, auth_srid, srtext, proj4text)
+                    VALUES (3794, 'EPSG', 3794, 
+                    'PROJCS["D96 / TM",GEOGCS["D96",DATUM["Drzavni_koordinatni_sistem_1996",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],AUTHORITY["EPSG","6763"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4796"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",15],PARAMETER["scale_factor",0.9999],PARAMETER["false_easting",500000],PARAMETER["false_northing",-5000000],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Northing",NORTH],AXIS["Easting",EAST],AUTHORITY["EPSG","3794"]]', 
+                    '+proj=tmerc +lat_0=0 +lon_0=15 +k=0.9999 +x_0=500000 +y_0=-5000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
+                """)
+                print("✓ SRID 3794 inserted.")
+            else:
+                print("✓ SRID 3794 exists.")
+                
+            conn.commit()
+            return True
+            
+    except Exception as e:
+        print(f"✗ Database setup check failed: {e}")
+        return False
+
+
 if __name__ == "__main__":
     # Test connection when run directly
     test_connection()

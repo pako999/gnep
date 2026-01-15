@@ -86,7 +86,12 @@ class HealthResponse(BaseModel):
 async def startup_event():
     """Initialize database connection on startup"""
     logger.info("Starting GNEP API server...")
-    initialize_database()
+    engine = initialize_database()
+    
+    # Ensure PostGIS and SRID 3794 are present
+    from database.connection import check_database_setup
+    check_database_setup(engine)
+    
     logger.info("Database initialized successfully")
 
 
