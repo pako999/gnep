@@ -61,7 +61,7 @@ export default function PropertyMap({
                     type="line"
                     source-layer="default"
                     paint={{
-                        'line-color': '#22c55e', // Green like gov site
+                        'line-color': '#eab308', // Yellow like gov site
                         'line-width': 1,
                         'line-opacity': 0.8
                     }}
