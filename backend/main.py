@@ -188,7 +188,10 @@ async def find_parcel_by_point_endpoint(data: CoordinateSearch):
         error_detail = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         logger.error(f"Error in coordinate search: {error_detail}")
         # RETURN FULL DETAIL FOR DEBUGGING
-        raise HTTPException(status_code=500, detail=f"Search Error: {str(e)}\n{error_detail}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Search Error: {str(e)}\n\nTraceback:\n{error_detail}"
+        )
 
 @app.get("/", tags=["Root"])
 async def root():
