@@ -11,10 +11,21 @@ class AgentService:
     def __init__(self, db_session):
         self.db = db_session
         self.api_key = os.getenv("OPENAI_API_KEY")
+        
+        # Configure Client (Support for Vercel AI Gateway)
         if not self.api_key:
             logger.warning("OPENAI_API_KEY is not set. Agent will not function.")
+            self.client = None
         else:
-            self.client = OpenAI(api_key=self.api_key)
+            base_url = None
+            if self.api_key.startswith("vck_"):
+                logger.info("Detected Vercel AI Gateway Key. Using Vercel Gateway URL.")
+                base_url = "https://gateway.ai.vercel.dev/v1"
+            
+            self.client = OpenAI(
+                api_key=self.api_key,
+                base_url=base_url
+            )
 
     def process_query(self, user_question: str):
         """
@@ -53,9 +64,11 @@ class AgentService:
             raise HTTPException(status_code=400, detail=f"Database query failed: {str(e)}")
 
     def _generate_sql(self, question: str) -> str:
-        """Call OpenAI to translate question to SQL"""
+        """Call OpenAI (or Vercel Gateway) to translate question to SQL"""
+        # Vercel Gateway requires specific model names sometimes, but standard usually work.
+        # Ensure we use a cheap model.
         response = self.client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o-mini", 
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": question}
