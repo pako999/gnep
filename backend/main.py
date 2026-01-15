@@ -228,10 +228,6 @@ if os.getenv("OPENAI_API_KEY"):
     logger.info(f"API Key Preview: {key[:8]}...{key[-4:]}")
 
 
-@app.post("/api/find-probable-parcels", response_model=MatchResponse, tags=["PropertyDetective"])
-async def api_find_probable_parcels(listing: ListingData):
-    # ... existing code ...
-    pass # Implementation hidden for brevity
 
 from fastapi import Response
 
@@ -279,13 +275,13 @@ async def get_parcel_tiles(z: int, x: int, y: int):
         error_detail = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         logger.error(f"Error in MVT tile: {error_detail}")
         # Return detail in header or body (MVT returns body usually)
-        raise HTTPException(status_code=500, detail=f"MVT Error: {str(e)}\n{error_detail}")
-            
-    except Exception as e:
-        import traceback
-        error_detail = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-        logger.error(f"Tile Error: {e}\n{error_detail}")
-        return Response(content=f"Tile Error: {e}\n{error_detail}".encode(), status_code=500)
+        raise HTTPException(
+            status_code=500, 
+            detail=f"MVT Error: {str(e)}\n\nTraceback:\n{error_detail}"
+        )
+
+@app.post("/api/find-probable-parcels", response_model=MatchResponse, tags=["PropertyDetective"])
+async def api_find_probable_parcels(listing: ListingData):
     """
     Find probable parcels matching real estate listing data
     
